@@ -114,3 +114,105 @@ print(f"      RMSE vs original: Lap {rmse(imagen_adaptada_32, imagen_reconstruid
 
 
 ## Pregunta 2
+
+El archivo `ColorHDR.py` contiene todas las funciones necesarias para la correcta ejecución del código. Se desarrolla la lectura de una imagen HDR, el cálculo de su luminancia, la compresión de rango dinámico mediante el filtro homomórfico y el método de Durand, y la reconstrucción del color con dos estrategias distintas (razón de cromaticidad y ajuste de saturación en HSV), además de la comparación contra el procesamiento independiente por canal RGB.
+
+Posterior a la definición de las funciones se encuentran las líneas del código principal a ser ejecutadas.
+
+```ruby
+
+(...)
+
+ruta_imagen = "archivos_t4/belgium.hdr"
+
+params_homo = dict(gamma_H=1.5, gamma_L=0.5, D0=30.0, c=1.0)
+params_durand = dict(sigma_s=16.0, sigma_r=0.4, contraste_objetivo=5.0)
+
+betas = [0.6, 1.0, 1.4]
+alphas = [0.6, 1.0, 1.4]
+
+imagen_bgr = cv2.imread(ruta_imagen, cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR)
+imagen_rgb = cv2.cvtColor(imagen_bgr, cv2.COLOR_BGR2RGB)
+imagen_orig_vis = normalizar_rango(np.maximum(imagen_rgb, 0.0), gamma=2.2)
+
+Y = calcular_luminancia(imagen_rgb)
+
+Y_homo = normalizar_rango(filtro_homomorfico(Y, **params_homo), gamma=2.2)
+Y_dur = normalizar_rango(metodo_durand(Y, **params_durand), gamma=2.2)
+
+rgb_homo_indep = hdr_por_canal_rgb(imagen_rgb, filtro_homomorfico, **params_homo)
+rgb_dur_indep = hdr_por_canal_rgb(imagen_rgb, metodo_durand, **params_durand)
+
+(...)
+```
+En este fragmento se define la imagen HDR a utilizar, los parámetros de ambos métodos de compresión (`params_homo` y `params_durand`) y los valores de β y α a evaluar. Luego se calcula la luminancia comprimida con cada método y la versión procesada independientemente por canal RGB.
+
+> La imagen `belgium.hdr` debe encontrarse dentro de la carpeta `archivos_t4` del repositorio, o bien se debe modificar `ruta_imagen` según corresponda.
+
+### Parte 1: Estrategia 1 (razón de cromaticidad)
+
+```ruby
+(...)
+
+for b in betas:
+    img_h, clip_h = reconstruir_color_beta(imagen_rgb, Y, Y_homo, beta=b)
+    met_h = metricas_color(imagen_rgb, img_h)
+    (...)
+    img_d, clip_d = reconstruir_color_beta(imagen_rgb, Y, Y_dur, beta=b)
+    met_d = metricas_color(imagen_rgb, img_d)
+    (...)
+
+(...)
+```
+Para cada valor de β se reconstruye el color con ambos métodos, se imprime en consola el porcentaje de clipping junto con las métricas de color y se genera una figura de 1x3 por método.
+
+### Parte 2: Estrategia 2 (ajuste de saturación HSV)
+
+```ruby
+(...)
+
+for a in alphas:
+    img_h, clip_h = reconstruir_color_hsv(imagen_rgb, Y, Y_homo, alpha=a)
+    met_h = metricas_color(imagen_rgb, img_h)
+    (...)
+    img_d, clip_d = reconstruir_color_hsv(imagen_rgb, Y, Y_dur, alpha=a)
+    met_d = metricas_color(imagen_rgb, img_d)
+    (...)
+
+(...)
+```
+Análogo a la Parte 1, pero variando el factor de saturación α. También se imprimen las métricas por consola y se generan las figuras correspondientes.
+
+### Parte 3: Comparaciones
+
+```ruby
+(...)
+
+print("[Homomorfico | RGB indep]", metricas_color(imagen_rgb, rgb_homo_indep))
+print("[Durand | RGB indep]", metricas_color(imagen_rgb, rgb_dur_indep))
+
+(...)
+
+recorte_color = (200, 450, 50, 300)
+recorte_borde = (150, 400, 320, 570)
+
+(...)
+```
+Se imprimen las métricas del procesamiento independiente por canal y se generan dos figuras de comparación principal (una por método) con la imagen original, la luminancia comprimida, el resultado RGB independiente y las mejores variantes de cada estrategia. Finalmente, se generan recortes ampliados de dos zonas de interés: una con colores intensos (`recorte_color`) y otra con una transición fuerte de iluminación (`recorte_borde`). Ambos se definen como `(y1, y2, x1, x2)` en píxeles.
+
+### Salida por consola
+
+Por cada configuración se imprime una línea con el formato:
+
+```ruby
+[Metodo | parametro] clip=XX.XX% | {S_in_media, S_out_media, C_out_media, delta_H_media_deg, delta_H_p95_deg}
+```
+
+### Advertencias y consideraciones
+
+**Todas las figuras se muestran al final con un único `plt.show()`, por lo que se abrirán varias ventanas a la vez (2 de la Parte 1, 2 de la Parte 2, 2 comparaciones principales y 2 recortes). Se recomienda cerrarlas una a una para revisarlas.**
+
+**Los recortes `recorte_color` y `recorte_borde` están definidos para las dimensiones de `belgium.hdr`. Si se usa otra imagen, hay que ajustarlos para que queden dentro de sus límites.**
+
+**La función `comparar_imagenes` requiere que `filas * cols` sea al menos igual a la cantidad de imágenes entregadas; de lo contrario, las imágenes sobrantes no se mostrarán.**
+

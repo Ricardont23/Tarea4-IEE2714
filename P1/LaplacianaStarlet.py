@@ -174,22 +174,20 @@ def aplicar_ganancias(piramide: list, factores: list) :
     return [factor * capa for factor, capa in zip(factores, piramide)]
 
 
+#==========================================================Parte 0 (implementacion necesaria)================================================================================================
 
 desv_est = 2.0
-alpha = 0.5
+alpha = 0.25
 factores_finos = [2.0, 2.0, 1.5, 0.8, 0.5]
 factores_gruesos = [0.7, 0.8, 1.2, 1.7, 2.3]
-
-
-#==========================================================Parte 0 (implementacion necesaria)================================================================================================
 
 imagen = cv2.imread("archivos_t4/belgium.hdr", cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR)
 imagen_rgb = cv2.cvtColor(imagen, cv2.COLOR_BGR2RGB)
 imagen_l = 0.177 * imagen_rgb[..., 0] + 0.813 * imagen_rgb[..., 1] + 0.011 * imagen_rgb[..., 2]
-imagen_adaptada_32 = a_pantalla(imagen_l, gamma=3.2)
+imagen_adaptada_42 = a_pantalla(imagen_l, gamma=4.2)
 
-piramide_lap, residuo_l = piramide_laplaciana(imagen_adaptada_32, desv_est)
-piramide_star, residuo_s = starlet(imagen_adaptada_32 )
+piramide_lap, residuo_l = piramide_laplaciana(imagen_adaptada_42, desv_est)
+piramide_star, residuo_s = starlet(imagen_adaptada_42 )
 
 imagen_reconstruida_l = reconstruccion(piramide_lap, residuo_l, "Laplaciana")
 imagen_reconstruida_s = reconstruccion(piramide_star, residuo_s, 'Starlet')
@@ -201,21 +199,21 @@ vlims_por_capa = [
 
 
 #==========================================================Parte 1================================================================================================
+'''
+mostrar_piramide(piramide_lap, residuo_l,  'Laplaciana', desv_est, vlims_por_capa )
+mostrar_piramide(piramide_star, residuo_s, 'Starlet', desv_est, vlims_por_capa  )
 
-mostrar_piramide(piramide_lap, residuo_l,  'Laplaciana', desv_est, vlims_por_capa)
-mostrar_piramide(piramide_star, residuo_s, 'Starlet', desv_est, vlims_por_capa)
-
-print(rmse(imagen_adaptada_32, imagen_reconstruida_s))
-print(rmse(imagen_adaptada_32, imagen_reconstruida_l))
+print(f"RMSE Reconstrucción Piramide Laplaciana:  {rmse(imagen_adaptada_42, imagen_reconstruida_l)}")
+print(f"RMSE Reconstrucción Transformada  Starlet:  {rmse(imagen_adaptada_42, imagen_reconstruida_s)}")
 
 comparar_reconstrucciones(
-     [imagen_adaptada_32, imagen_reconstruida_l, imagen_reconstruida_s],
-     ["Original (γ=3.2)", "Reconstruida Laplaciana", "Reconstruida Starlet"],
+     [imagen_adaptada_42, imagen_reconstruida_l, imagen_reconstruida_s],
+     ["Original (γ=4.2)", "Reconstruida Laplaciana", "Reconstruida Starlet"],
      "Verificación de reconstrucción sin modificar coeficientes",
      filas=1, cols=3
- )
+ )'''
 #==========================================================Parte 2================================================================================================
-
+'''
 piramide_lap_umb, porcentaje_coef_l = umbral_duro(piramide_lap, alpha)
 piramide_star_umb, porcentaje_coef_s = umbral_duro(piramide_star, alpha)
 
@@ -225,16 +223,16 @@ mostrar_piramide(piramide_star_umb, residuo_s, 'Starlet', desv_est, vlims_por_ca
 imagen_reconstruida_l_umb = reconstruccion(piramide_lap_umb, residuo_l, "Laplaciana")
 imagen_reconstruida_s_umb = reconstruccion(piramide_star_umb, residuo_s, 'Starlet')
 
-print(f"α={alpha} | % conservado Lap: {np.round(porcentaje_coef_l, 2)} | Starlet: {np.round(porcentaje_coef_s, 2)}")
-print(f"      RMSE vs original: Lap {rmse(imagen_adaptada_32, imagen_reconstruida_l_umb):.4f} | Starlet {rmse(imagen_adaptada_32, imagen_reconstruida_s_umb):.4f}")
+print(f"alpha={alpha} | % conservado Lap: {np.round(porcentaje_coef_l, 2)} | Starlet: {np.round(porcentaje_coef_s, 2)}")
+print(f"      RMSE vs original: Lap {rmse(imagen_adaptada_42, imagen_reconstruida_l_umb):.4f} | Starlet {rmse(imagen_adaptada_42, imagen_reconstruida_s_umb):.4f}")
 
 comparar_reconstrucciones(
-     [imagen_adaptada_32, imagen_reconstruida_l_umb, imagen_reconstruida_s_umb],
-     ["Original", f"Laplaciana (α={alpha})", f"Starlet (α={alpha})"],
-     f"Reconstrucción tras umbral duro (α={alpha})",
+     [imagen_adaptada_42, imagen_reconstruida_l_umb, imagen_reconstruida_s_umb],
+     ["Original", f"Laplaciana (alpha={alpha})", f"Starlet (alpha={alpha})"],
+     f"Reconstrucción tras umbral duro (alpha={alpha})",
      filas=1, cols=3
  )
-
+'''
 #==========================================================Parte 3================================================================================================
 
 piramide_fina_l = aplicar_ganancias(piramide_lap, factores_finos)
@@ -253,8 +251,8 @@ reconstruida_s_fina = reconstruccion(piramide_fina_s, residuo_s, 'Starlet')
 reconstruida_l_gruesa = reconstruccion(piramide_gruesa_l, residuo_l, "Laplaciana")
 reconstruida_s_gruesa = reconstruccion(piramide_gruesa_s, residuo_s, 'Starlet')
 
-print(f"      RMSE vs original (fina): Lap {rmse(imagen_adaptada_32, reconstruida_l_fina):.4f} | Starlet {rmse(imagen_adaptada_32, reconstruida_s_fina):.4f}")
-print(f"      RMSE vs original (gruesa): Lap {rmse(imagen_adaptada_32, reconstruida_l_gruesa):.4f} | Starlet {rmse(imagen_adaptada_32, reconstruida_s_gruesa ):.4f}")
+print(f"      RMSE vs original (fina): Lap {rmse(imagen_adaptada_42, reconstruida_l_fina):.4f} | Starlet {rmse(imagen_adaptada_42, reconstruida_s_fina):.4f}")
+print(f"      RMSE vs original (gruesa): Lap {rmse(imagen_adaptada_42, reconstruida_l_gruesa):.4f} | Starlet {rmse(imagen_adaptada_42, reconstruida_s_gruesa ):.4f}")
 
 comparar_reconstrucciones(
      [reconstruida_l_fina, reconstruida_s_fina, reconstruida_l_gruesa, reconstruida_s_gruesa],
